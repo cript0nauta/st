@@ -41,7 +41,7 @@
 #define ISCONTROLC0(c)		(BETWEEN(c, 0, 0x1f) || (c) == '\177')
 #define ISCONTROLC1(c)		(BETWEEN(c, 0x80, 0x9f))
 #define ISCONTROL(c)		(ISCONTROLC0(c) || ISCONTROLC1(c))
-#define ISDELIM(u)		(utf8strchr(worddelimiters, u) != NULL)
+#define ISDELIM(u)		(utf8strchr(worddelimiters_free, u) != NULL)
 
 enum term_mode {
 	MODE_WRAP        = 1 << 0,
@@ -97,6 +97,8 @@ typedef struct {
 	int mode;
 	int type;
 	int snap;
+    char delimstart;
+    char delimend;
 	/*
 	 * Selection variables:
 	 * nb – normalized coordinates of the beginning of the selection
@@ -418,6 +420,8 @@ void
 selinit(void)
 {
 	sel.mode = SEL_IDLE;
+    sel.delimstart = '\0';
+    sel.delimend = '\0';
 	sel.snap = 0;
 	sel.ob.x = -1;
 }
@@ -439,6 +443,7 @@ tlinelen(int y)
 void
 selstart(int col, int row, int snap)
 {
+    char *delim;
 	selclear();
 	sel.mode = SEL_EMPTY;
 	sel.type = SEL_REGULAR;
@@ -446,6 +451,10 @@ selstart(int col, int row, int snap)
 	sel.snap = snap;
 	sel.oe.x = sel.ob.x = col;
 	sel.oe.y = sel.ob.y = row;
+    if(col>0 && (delim = utf8strchr(worddelimiters_start, term.line[row][col-1].u))) {
+        sel.delimstart = *delim;
+        sel.delimend = worddelimiters_end[delim - worddelimiters_start];
+    }
 	selnormalize();
 
 	if (sel.snap != 0)
@@ -554,18 +563,22 @@ selsnap(int *x, int *y, int direction)
 					yt = *y, xt = *x;
 				else
 					yt = newy, xt = newx;
-				if (!(term.line[yt][xt].mode & ATTR_WRAP))
+				if (!(term.line[yt][xt].mode & ATTR_WRAP) && !sel.delimstart)
 					break;
 			}
 
-			if (newx >= tlinelen(newy))
+			if (newx >= tlinelen(newy) && !sel.delimstart)
 				break;
 
 			gp = &term.line[newy][newx];
 			delim = ISDELIM(gp->u);
-			if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim
+			if (!(gp->mode & ATTR_WDUMMY) && !sel.delimstart && (delim != prevdelim
 					|| (delim && gp->u != prevgp->u)))
 				break;
+            if (sel.delimstart && !(gp->mode & ATTR_WDUMMY))
+                if (direction>0 && gp->u == sel.delimend
+                        || direction<0 && gp->u == sel.delimstart)
+                    break;
 
 			*x = newx;
 			*y = newy;
@@ -659,6 +672,8 @@ selclear(void)
 	if (sel.ob.x == -1)
 		return;
 	sel.mode = SEL_IDLE;
+    sel.delimstart = '\0';
+    sel.delimend = '\0';
 	sel.ob.x = -1;
 	tsetdirt(sel.nb.y, sel.ne.y);
 }
