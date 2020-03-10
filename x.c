@@ -229,7 +229,7 @@ typedef struct {
 static Fontcache frc[16];
 static int frclen = 0;
 static char *usedfont = NULL;
-static double usedfontsize = 0;
+double usedfontsize = 0; /* global used by newterm function in st.c */
 static double defaultfontsize = 0;
 
 static char *opt_class = NULL;
@@ -240,6 +240,8 @@ static char *opt_io    = NULL;
 static char *opt_line  = NULL;
 static char *opt_name  = NULL;
 static char *opt_title = NULL;
+
+static double opt_fontsize = 0;
 
 static int oldbutton = 3; /* button event on startup: 3 = release */
 
@@ -1064,7 +1066,7 @@ xinit(int cols, int rows)
 		die("could not init fontconfig.\n");
 
 	usedfont = (opt_font == NULL)? font : opt_font;
-	xloadfonts(usedfont, 0);
+	xloadfonts(usedfont, opt_fontsize);
 
 	/* colors */
 	xw.cmap = XDefaultColormap(xw.dpy, xw.scr);
@@ -1917,11 +1919,11 @@ run(void)
 void
 usage(void)
 {
-	die("usage: %s [-aiv] [-c class] [-f font] [-g geometry]"
+	die("usage: %s [-aiv] [-c class] [-f font] [-s fontsize] [-g geometry]"
 	    " [-n name] [-o file]\n"
 	    "          [-T title] [-t title] [-w windowid]"
 	    " [[-e] command [args ...]]\n"
-	    "       %s [-aiv] [-c class] [-f font] [-g geometry]"
+	    "       %s [-aiv] [-c class] [-f font] [-s fontsize] [-g geometry]"
 	    " [-n name] [-o file]\n"
 	    "          [-T title] [-t title] [-w windowid] -l line"
 	    " [stty_args ...]\n", argv0, argv0);
@@ -1963,6 +1965,9 @@ main(int argc, char *argv[])
 		break;
 	case 'n':
 		opt_name = EARGF(usage());
+		break;
+	case 's':
+		sscanf(EARGF(usage()), "%lf", &opt_fontsize);
 		break;
 	case 't':
 	case 'T':

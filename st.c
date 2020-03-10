@@ -1104,13 +1104,15 @@ kscrollup(const Arg* a)
 void
 newterm(const Arg* a)
 {
+	char buf[32];
 	switch (fork()) {
 	case -1:
 		die("fork failed: %s\n", strerror(errno));
 		break;
 	case 0:
 		chdir(getcwd_by_pid(pid));
-		execlp("st", "./st", NULL);
+		snprintf(buf, sizeof buf, "%lf", usedfontsize);
+		execlp("st", "./st", "-s", buf, NULL);
 		break;
 	}
 }

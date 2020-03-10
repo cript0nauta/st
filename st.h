@@ -131,3 +131,5 @@ extern unsigned int tabspaces;
 extern unsigned int defaultfg;
 extern unsigned int defaultbg;
 extern MouseKey mkeys[];
+
+extern double usedfontsize; /* global defined in x.c */
